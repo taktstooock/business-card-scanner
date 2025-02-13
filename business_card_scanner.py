@@ -136,6 +136,13 @@ class BusinessCardScanner:
         """PDFファイルを処理し、全連絡先のvCardをページ毎に追記して1つのファイルにまとめる"""
         os.makedirs(output_dir, exist_ok=True)
         output_path = os.path.join(output_dir, 'contacts.vcf')
+        # 既存の出力ファイルの存在確認と削除確認
+        if os.path.exists(output_path):
+            resp = input(f"Output file '{output_path}' already exists. Delete it? (y/n): ")
+            if resp.lower() == 'y':
+                os.remove(output_path)
+            else:
+                print("Existing file retained. Data will be appended.")
         # 出力ファイルを初期化してオープン（以降、ページ毎に追記）
         with open(output_path, 'w', encoding='utf-8') as f:
             # PDFを画像に変換
@@ -152,19 +159,21 @@ class BusinessCardScanner:
                     
                 # 情報の抽出（リソース枯渇エラー時は10秒待機して再試行）
                 import time
-                while True:
+                for _ in range(3):
                     try:
                         info = self.extract_info_from_image(image)
                         break
                     except Exception as e:
                         if "Resource has been exhausted" in str(e):
                             print("Resource exhausted error encountered. Waiting 10 seconds before retrying...", end='', flush=True)
-                            for j in range(10):
+                            for _ in range(10):
                                 print(".", end='', flush=True)
                                 time.sleep(1)
                             print()  # 改行して再試行開始
                         else:
                             raise e
+                else:
+                    raise RuntimeError("Failed to extract information from image")
                             
                 # 画像の一時保存（vCard用）
                 temp_image_path = os.path.join(output_dir, f'card_{i}.png')
