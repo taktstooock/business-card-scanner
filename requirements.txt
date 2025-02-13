@@ -1,0 +1,7 @@
+pdf2image
+Pillow
+google-generativeai
+vobject
+pykakasi
+python-dotenv
+pytesseract
