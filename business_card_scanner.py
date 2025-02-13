@@ -150,9 +150,22 @@ class BusinessCardScanner:
                     if detected_angle != 0:
                         image = image.rotate(detected_angle, expand=True)
                     
-                # 情報の抽出
-                info = self.extract_info_from_image(image)
-                
+                # 情報の抽出（リソース枯渇エラー時は10秒待機して再試行）
+                import time
+                while True:
+                    try:
+                        info = self.extract_info_from_image(image)
+                        break
+                    except Exception as e:
+                        if "Resource has been exhausted" in str(e):
+                            print("Resource exhausted error encountered. Waiting 10 seconds before retrying...", end='', flush=True)
+                            for j in range(10):
+                                print(".", end='', flush=True)
+                                time.sleep(1)
+                            print()  # 改行して再試行開始
+                        else:
+                            raise e
+                            
                 # 画像の一時保存（vCard用）
                 temp_image_path = os.path.join(output_dir, f'card_{i}.png')
                 image.save(temp_image_path)
