@@ -1,7 +1,4 @@
 import os
-# 追加: gRPCの詳細なログ出力を抑制
-os.environ["GRPC_VERBOSITY"] = "ERROR"
-os.environ["GRPC_TRACE"] = ""
 from typing import Dict
 import re
 import pytesseract
@@ -159,7 +156,7 @@ class BusinessCardScanner:
                     
                 # 情報の抽出（リソース枯渇エラー時は10秒待機して再試行）
                 import time
-                for _ in range(3):
+                for _ in range(10):
                     try:
                         info = self.extract_info_from_image(image)
                         break
