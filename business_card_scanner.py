@@ -133,43 +133,36 @@ class BusinessCardScanner:
         return card.serialize()
     
     def process_pdf(self, pdf_path: str, output_dir: str):
-        """PDFファイルを処理し、全連絡先のvCardを1つのファイルにまとめる"""
+        """PDFファイルを処理し、全連絡先のvCardをページ毎に追記して1つのファイルにまとめる"""
         os.makedirs(output_dir, exist_ok=True)
-        vcard_list = []
-        
-        # PDFを画像に変換
-        images = convert_from_path(pdf_path, poppler_path='../.library/poppler-24.02.0/Library/bin')
-        
-        for i, image in enumerate(images):
-            # 画像の向き検出
-            osd = pytesseract.image_to_osd(image)
-            match = re.search(r'Orientation in degrees:\s*(\d+)', osd)
-            if match:
-                detected_angle = int(match.group(1))
-                print(f"Detected angle: {detected_angle}")
-                # tesseractが返す角度は、画像を何度回転させれば正しい向きになるかなので、回転させる
-                if detected_angle != 0:
-                    image = image.rotate(detected_angle, expand=True)
-            
-            # 情報の抽出
-            info = self.extract_info_from_image(image)
-            
-            # 画像の一時保存（vCard用）
-            temp_image_path = os.path.join(output_dir, f'card_{i}.png')
-            image.save(temp_image_path)
-            
-            # vCard文字列を生成してリストへ追加
-            vcard_text = self.create_vcard(info, temp_image_path)
-            vcard_list.append(vcard_text)
-            
-            # 一時画像ファイルの削除
-            os.remove(temp_image_path)
-        
-        # すべての連絡先を1つのvCardファイルに書き出し
-        combined_vcards = "\n".join(vcard_list)
         output_path = os.path.join(output_dir, 'contacts.vcf')
+        # 出力ファイルを初期化してオープン（以降、ページ毎に追記）
         with open(output_path, 'w', encoding='utf-8') as f:
-            f.write(combined_vcards)
+            # PDFを画像に変換
+            images = convert_from_path(pdf_path, poppler_path='../.library/poppler-24.02.0/Library/bin')
+            for i, image in enumerate(images):
+                # 画像の向き検出
+                osd = pytesseract.image_to_osd(image)
+                match = re.search(r'Orientation in degrees:\s*(\d+)', osd)
+                if match:
+                    detected_angle = int(match.group(1))
+                    print(f"Detected angle: {detected_angle}")
+                    if detected_angle != 0:
+                        image = image.rotate(detected_angle, expand=True)
+                    
+                # 情報の抽出
+                info = self.extract_info_from_image(image)
+                
+                # 画像の一時保存（vCard用）
+                temp_image_path = os.path.join(output_dir, f'card_{i}.png')
+                image.save(temp_image_path)
+                
+                # vCard文字列を生成してファイルに追記
+                vcard_text = self.create_vcard(info, temp_image_path)
+                f.write(vcard_text + "\n")
+                
+                # 一時画像ファイルの削除
+                os.remove(temp_image_path)
 
 def main():
     scanner = BusinessCardScanner()
